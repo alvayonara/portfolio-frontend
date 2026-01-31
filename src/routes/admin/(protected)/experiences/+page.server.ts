@@ -1,0 +1,66 @@
+import type { Actions, PageServerLoad } from "./$types";
+import { backendFetch } from "$lib/api/backend";
+import { error, fail } from "@sveltejs/kit";
+
+export const load: PageServerLoad = async ({ fetch, cookies }) => {
+    const token = cookies.get('admin_token');
+    if (!token) {
+        throw new Error('Unauthorized');
+    }
+    const res = await backendFetch(fetch, '/admin/experiences', token);
+    if (!res.ok) {
+        throw new Error('Failed to load experiences');
+    }
+    const experiences = await res.json();
+    return { experiences };
+}
+
+export const actions: Actions = {
+    create: async ({ request, fetch, cookies }) => {
+        const token = cookies.get('admin_token');
+        if (!token) {
+            return fail(401);
+        }
+        const data = Object.fromEntries(await request.formData());
+        const res = await backendFetch(fetch, '/admin/experiences', token, {
+            method: 'POST',
+            body: JSON.stringify(data)
+        });
+        if (!res.ok) {
+            return fail(400, { error: 'Failed to create experience' });
+        }
+        return { success: true };
+    },
+    update: async ({ request, fetch, cookies }) => {
+        const token = cookies.get('admin_token');
+        if (!token) {
+            return fail(401);
+        }
+        const data = Object.fromEntries(await request.formData());
+        const id = data.id;
+        delete data.id;
+
+        const res = await backendFetch(fetch, `/admin/experiences/${id}`, token, {
+            method: 'PUT',
+            body: JSON.stringify(data)
+        });
+        if (!res.ok) {
+            return fail(400, { error: 'Failed to update experience' });
+        }
+        return { success: true };
+    },
+    delete: async ({ request, fetch, cookies }) => {
+        const token = cookies.get("admin_token");
+        if (!token) {
+            return fail(401);
+        }
+        const id = (await request.formData()).get("id");
+        const res = await backendFetch(fetch, `/admin/experiences/${id}`, token, {
+            method: 'DELETE'
+        });
+        if (!res.ok) {
+            return fail(400, { error: 'Failed to delete experience' });
+        }
+        return { success: true };
+    }
+};
