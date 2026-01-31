@@ -1,13 +1,18 @@
-import { json } from "@sveltejs/kit";
+import type { RequestHandler } from "@sveltejs/kit";
+import { error, json } from "@sveltejs/kit";
 
-export async function POST({ request, cookies }) {
-    const {token} = await request.json();
+export const POST: RequestHandler = async ({ request, cookies }) => {
+    const { token } = await request.json();
+    if (!token) {
+        return json({ error: 'Token required' }, { status: 400 });
+    }
 
-    cookies.set('access_token', token, {
+    cookies.set('admin_token', token, {
         path: '/',
         httpOnly: true,
         sameSite: 'lax',
-        secure: false // TODO: change in prod due https
+        secure: false, //TODO: set true in prod (https)
+        maxAge: 60 * 60
     });
-    return json({success: true});
+    return json({ success: true });
 }
