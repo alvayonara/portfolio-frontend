@@ -1,6 +1,6 @@
-import { redirect } from "@sveltejs/kit";
+import type { RequestHandler } from './$types';
 
-export async function POST({ cookies }) {
-    cookies.delete('access_token', { path: '/'});
-    throw redirect(302, '/admin/login');
-}
+export const POST: RequestHandler = async ({ cookies }) => {
+  cookies.delete('admin_token', { path: '/' });
+  return new Response(null, { status: 204 });
+};
