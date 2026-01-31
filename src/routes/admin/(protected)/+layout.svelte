@@ -33,6 +33,10 @@
 
     <button class="logout" on:click={logout}>Logout</button>
   </aside>
+
+  <main class="content">
+    <slot />
+  </main>
 </div>
 
 <style>
