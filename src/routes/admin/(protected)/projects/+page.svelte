@@ -1,0 +1,296 @@
+<script lang="ts">
+  import type { PageData } from "./$types";
+  import { backendFetch } from "$lib/api/backend";
+  import { page } from "$app/stores";
+
+  export let data: PageData;
+
+  $: {
+    const editId = $page.url.searchParams.get("edit");
+    if (editId) {
+      const project = data.projects.find((p: { id: number; }) => p.id === Number(editId));
+      if (project) {
+        edit(project);
+      }
+    }
+  }
+
+  type ProjectForm = {
+    id: number | null;
+    title: string;
+    description: string;
+    techStack: string;
+    repoUrl: string;
+    s3Key: string | null;
+  };
+
+  const emptyForm = (): ProjectForm => ({
+    id: null,
+    title: "",
+    description: "",
+    techStack: "",
+    repoUrl: "",
+    s3Key: null,
+  });
+
+  let form: ProjectForm = emptyForm();
+  let currentProject: any = null;
+
+  let imagePreview: string | null = null;
+  let uploading = false;
+
+  function edit(p: any) {
+    currentProject = p;
+    form = {
+      id: p.id,
+      title: p.title ?? "",
+      description: p.description ?? "",
+      techStack: p.techStack ?? "",
+      repoUrl: p.repoUrl ?? "",
+      s3Key: p.s3Key ?? null,
+    };
+
+    imagePreview = p.s3Key
+      ? `${import.meta.env.VITE_S3_PUBLIC_BASE_URL}/${p.s3Key}`
+      : null;
+  }
+
+  function reset() {
+    form = emptyForm();
+    currentProject = null;
+    imagePreview = null;
+  }
+
+  async function uploadImage(e: Event) {
+    const input = e.target as HTMLInputElement;
+    const file = input.files?.[0];
+    if (!file || !form.id) return;
+
+    uploading = true;
+
+    try {
+      const res = await backendFetch(
+        fetch,
+        `/admin/projects/${form.id}/upload-url`,
+        undefined,
+        {
+          method: "POST",
+          body: JSON.stringify({
+            filename: file.name,
+            contentType: file.type,
+            size: file.size,
+          }),
+        },
+      );
+
+      if (!res.ok) throw new Error("Failed to get upload URL");
+
+      const { uploadUrl, publicUrl, s3Key } = await res.json();
+
+      const uploadRes = await fetch(uploadUrl, {
+        method: "PUT",
+        headers: { "Content-Type": file.type },
+        body: file,
+      });
+
+      if (!uploadRes.ok) throw new Error("Upload failed");
+
+      form.s3Key = s3Key;
+      imagePreview = publicUrl;
+      input.value = "";
+    } catch {
+      alert("Image upload failed");
+    } finally {
+      uploading = false;
+    }
+  }
+</script>
+
+<h1>Projects</h1>
+
+<!-- CREATE DRAFT -->
+<form method="POST" action="?/createDraft">
+  <button class="primary" type="submit">➕ New Project</button>
+</form>
+
+<!-- EDITOR -->
+{#if form.id}
+  <section class="editor">
+    <h2>Edit Project</h2>
+
+    <form method="POST" action="?/update">
+      <input type="hidden" name="id" value={form.id} />
+
+      <label>
+        Title
+        <input name="title" bind:value={form.title} />
+      </label>
+
+      <label>
+        Description
+        <textarea name="description" bind:value={form.description} />
+      </label>
+
+      <label>
+        Tech Stack
+        <input name="techStack" bind:value={form.techStack} />
+      </label>
+
+      <label>
+        Repo URL
+        <input name="repoUrl" bind:value={form.repoUrl} />
+      </label>
+
+      <label>
+        Project Image
+        <input type="file" accept="image/*" on:change={uploadImage} />
+      </label>
+
+      {#if uploading}
+        <p class="muted">Uploading image…</p>
+      {/if}
+
+      {#if imagePreview}
+        <img class="preview" src={imagePreview} alt="Preview" />
+      {/if}
+
+      <div class="actions">
+        <button class="primary" type="submit">💾 Save</button>
+        <button type="button" on:click={reset}>Cancel</button>
+      </div>
+    </form>
+
+    <!-- SECONDARY ACTIONS (NOT NESTED) -->
+    <div class="actions secondary">
+      <form method="POST" action="?/togglePublish">
+        <input type="hidden" name="id" value={form.id} />
+        <input
+          type="hidden"
+          name="publishAction"
+          value={currentProject?.published ? "unpublish" : "publish"}
+        />
+        <button type="submit">
+          {currentProject?.published ? "Unpublish" : "Publish"}
+        </button>
+      </form>
+
+      <form
+        method="POST"
+        action="?/delete"
+        on:submit={() => confirm("Delete this project?")}
+      >
+        <input type="hidden" name="id" value={form.id} />
+        <button class="danger">Delete</button>
+      </form>
+    </div>
+  </section>
+{/if}
+
+<hr />
+
+<!-- PROJECT LIST -->
+<section class="list">
+  {#each data.projects as p}
+    <div class="card">
+      <strong>{p.title || "(Untitled draft)"}</strong>
+
+      {#if p.published}
+        <span class="badge published">Published</span>
+      {:else}
+        <span class="badge draft">Draft</span>
+      {/if}
+
+      {#if p.s3Key}
+        <img
+          class="thumb"
+          src={`${import.meta.env.VITE_S3_PUBLIC_BASE_URL}/${p.s3Key}`}
+          alt={p.title}
+        />
+      {/if}
+
+      <p>{p.description}</p>
+
+      <button on:click={() => edit(p)}>Edit</button>
+    </div>
+  {/each}
+</section>
+
+<style>
+  h1 {
+    margin-bottom: 1rem;
+  }
+
+  .editor {
+    border: 1px solid #ddd;
+    padding: 1rem;
+    margin-top: 1rem;
+  }
+
+  label {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    margin-bottom: 0.75rem;
+  }
+
+  textarea {
+    resize: vertical;
+  }
+
+  .actions {
+    display: flex;
+    gap: 1rem;
+    margin-top: 1rem;
+  }
+
+  .secondary {
+    margin-top: 0.5rem;
+  }
+
+  .primary {
+    background: #2563eb;
+    color: white;
+  }
+
+  .danger {
+    color: red;
+  }
+
+  .preview {
+    max-width: 300px;
+    margin-top: 0.5rem;
+    border-radius: 6px;
+  }
+
+  .thumb {
+    max-width: 160px;
+    border-radius: 4px;
+    margin-top: 0.5rem;
+  }
+
+  .card {
+    border: 1px solid #ddd;
+    padding: 1rem;
+    margin-bottom: 1rem;
+  }
+
+  .badge {
+    margin-left: 0.5rem;
+    font-size: 0.75rem;
+    padding: 0.2rem 0.4rem;
+  }
+
+  .published {
+    background: #d1fae5;
+    color: #065f46;
+  }
+
+  .draft {
+    background: #fee2e2;
+    color: #991b1b;
+  }
+
+  .muted {
+    color: #666;
+  }
+</style>
