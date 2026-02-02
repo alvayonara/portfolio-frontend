@@ -1,11 +1,11 @@
 import type { Actions, PageServerLoad } from "./$types";
 import { backendFetch } from "$lib/api/backend";
-import { error, fail } from "@sveltejs/kit";
+import { fail, redirect } from "@sveltejs/kit";
 
 export const load: PageServerLoad = async ({ fetch, cookies }) => {
     const token = cookies.get('admin_token');
     if (!token) {
-        throw new Error('Unauthorized');
+        throw redirect(302, "/admin/login");
     }
     const res = await backendFetch(fetch, '/admin/experiences', token);
     if (!res.ok) {
