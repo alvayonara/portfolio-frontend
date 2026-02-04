@@ -3,11 +3,7 @@ import { backendFetch } from "$lib/api/backend";
 import { fail, redirect } from "@sveltejs/kit";
 
 export const load: PageServerLoad = async ({ fetch, cookies }) => {
-  const token = cookies.get("admin_token");
-  if (!token) {
-    throw redirect(302, "/admin/login");
-  }
-  const res = await backendFetch(fetch, "/educations", token);
+  const res = await backendFetch(fetch, "/educations", undefined);
   if (!res.ok) {
     throw new Error("Failed to load educations");
   }
