@@ -5,9 +5,53 @@
 	export let data: PageData;
 
 	let activeFilter = '*';
+	let contactStatus: 'idle' | 'submitting' | 'success' | 'error' = 'idle';
+	let errorMessage = '';
 
 	function filterProjects(filter: string) {
 		activeFilter = filter;
+	}
+
+	async function handleContactSubmit(event: SubmitEvent) {
+		event.preventDefault();
+		contactStatus = 'submitting';
+		errorMessage = '';
+
+		const form = event.target as HTMLFormElement;
+		const formData = new FormData(form);
+
+		const company = formData.get('company')?.toString() || '';
+		if (company) {
+			return;
+		}
+
+		try {
+			const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/contact`, {
+				method: 'POST',
+				headers: {
+					'Content-Type': 'application/json',
+				},
+				body: JSON.stringify({
+					name: formData.get('name'),
+					email: formData.get('email'),
+					subject: formData.get('subject'),
+					message: formData.get('message')
+				}),
+			});
+
+			if (response.ok) {
+				contactStatus = 'success';
+				form.reset();
+			} else {
+				const errorText = await response.text().catch(() => 'Failed to send message');
+				contactStatus = 'error';
+				errorMessage = errorText;
+			}
+		} catch (error) {
+			contactStatus = 'error';
+			errorMessage = 'Failed to send message. Please try again.';
+			console.error('Contact form error:', error);
+		}
 	}
 
 	$: filteredProjects = data.projects || [];
@@ -166,8 +210,8 @@
 					</div>
 				{/if}
 
-				<h1 class="mb-2 mt-0">{data.profile?.fullName || 'Your Name'}</h1>
-				<span>I'm a <span class="text-rotating">{data.profile?.headline || 'Developer'}</span></span>
+				<h1 class="mb-2 mt-0">{data.profile?.fullName || 'Alva Yonara Puramandya'}</h1>
+				<span><span class="text-rotating">{data.profile?.headline || 'Software Engineer'}</span></span>
 
 				<ul class="social-icons light list-inline mb-0 mt-4">
 					{#if data.profile?.linkedinUrl}
@@ -405,7 +449,19 @@
 				</div>
 
 				<div class="col-md-8">
-					<form class="contact-form mt-6" method="POST">
+					{#if contactStatus === 'success'}
+						<div class="alert alert-success">
+							Thank you! Your message has been sent successfully.
+						</div>
+					{/if}
+					
+					{#if contactStatus === 'error'}
+						<div class="alert alert-danger">
+							{errorMessage || 'Failed to send message. Please try again.'}
+						</div>
+					{/if}
+
+					<form class="contact-form mt-6" on:submit={handleContactSubmit}>
 						<div class="row">
 							<div class="column col-md-6">
 								<div class="form-group">
@@ -415,6 +471,7 @@
 										name="name" 
 										placeholder="Your name" 
 										required 
+										disabled={contactStatus === 'submitting'}
 									/>
 								</div>
 							</div>
@@ -427,6 +484,7 @@
 										name="email" 
 										placeholder="Email address" 
 										required 
+										disabled={contactStatus === 'submitting'}
 									/>
 								</div>
 							</div>
@@ -439,6 +497,7 @@
 										name="subject" 
 										placeholder="Subject" 
 										required 
+										disabled={contactStatus === 'submitting'}
 									/>
 								</div>
 							</div>
@@ -451,12 +510,17 @@
 										rows="5" 
 										placeholder="Message" 
 										required
+										disabled={contactStatus === 'submitting'}
 									></textarea>
 								</div>
 							</div>
+
+							<input type="text" name="company" style="display: none;" tabindex="-1" autocomplete="off" />
 						</div>
 
-						<button type="submit" class="btn btn-default">Send Message</button>
+						<button type="submit" class="btn btn-default" disabled={contactStatus === 'submitting'}>
+							{contactStatus === 'submitting' ? 'Sending...' : 'Send Message'}
+						</button>
 					</form>
 				</div>
 			</div>
@@ -554,6 +618,24 @@
 	}
 
 	:global(.white-popup p) {
+
+	.alert {
+		padding: 15px;
+		margin-bottom: 20px;
+		border-radius: 4px;
+	}
+
+	.alert-success {
+		background-color: #d4edda;
+		border: 1px solid #c3e6cb;
+		color: #155724;
+	}
+
+	.alert-danger {
+		background-color: #f8d7da;
+		border: 1px solid #f5c6cb;
+		color: #721c24;
+	}
 		white-space: pre-line;
 	}
 
