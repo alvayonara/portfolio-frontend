@@ -32,19 +32,34 @@ export const actions: Actions = {
         if (!token) {
             return fail(401);
         }
-        const data = Object.fromEntries(await request.formData());
+        const formData = await request.formData();
+        const data = Object.fromEntries(formData);
+        
+        console.log("Form data received:", data);
+        
         const res = await backendFetch(fetch, "/admin/resume/upload-url", token, {
             method: "POST",
             body: JSON.stringify({
-                filename: data.filename,
-                contentType: data.contentType,
-                size: Number(data.size)
+                filename: data.filename?.toString() || "resume.pdf",
+                contentType: data.contentType?.toString() || "application/pdf",
+                size: Number(data.size?.toString() || "0")
             })
         });
 
         if (!res.ok) {
             return fail(400, { error: "Failed to create upload URL" });
         }
-        return await res.json();
+        const result = await res.json();
+        console.log("Backend response:", result);
+        
+        // Backend returns an array [uploadUrl, publicUrl]
+        if (Array.isArray(result)) {
+            return {
+                uploadUrl: result[0],
+                publicUrl: result[1]
+            };
+        }
+        
+        return result;
     }
 };

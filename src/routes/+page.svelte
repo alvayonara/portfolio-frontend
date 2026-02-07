@@ -56,6 +56,11 @@
 
 	$: filteredProjects = data.projects || [];
 
+	function getProjectImageUrl(s3Key: string | null): string | null {
+		if (!s3Key) return null;
+		return `${import.meta.env.VITE_S3_PUBLIC_BASE_URL}/${s3Key}`;
+	}
+
 	onMount(() => {
 		const preloader = document.getElementById('preloader');
 		if (preloader) {
@@ -196,9 +201,9 @@
 	<section id="home" class="home d-flex align-items-center">
 		<div class="container">
 			<div class="intro">
-				{#if data.profile?.photo}
+				{#if data.profile?.s3Key}
 					<img 
-						src={data.profile.photo} 
+						src={`${import.meta.env.VITE_S3_PUBLIC_BASE_URL}/profile/${data.profile.s3Key}`} 
 						width="108" 
 						height="108" 
 						alt="{data.profile.fullName} | Profile" 
@@ -268,9 +273,9 @@
 			<div class="row">
 				<div class="col-md-3">
 					<div class="text-center text-md-left">
-						{#if data.profile?.photo}
+						{#if data.profile?.s3Key}
 							<img 
-								src={data.profile.photo} 
+								src={`${import.meta.env.VITE_S3_PUBLIC_BASE_URL}/profile/${data.profile.s3Key}`} 
 								width="150" 
 								height="150" 
 								alt="{data.profile.fullName} | Profile" 
@@ -293,14 +298,14 @@
 									<p class="profile-summary">{data.profile.summary}</p>
 								{/if}
 								
-								{#if data.resume}
+								{#if data.resume?.url}
 									<div class="mt-3">
 										<a 
-											href={data.resume.publicUrl} 
+											href={data.resume.url} 
 											class="btn btn-default" 
 											download
 											target="_blank"
-											rel="noopener"
+											rel="noopener noreferrer"
 										>
 											Download CV
 										</a>
@@ -398,7 +403,7 @@
 									</div>
 									<div class="thumb">
 										{#if project.s3Key}
-											<img src={project.s3Key} alt={project.title} />
+										<img src={getProjectImageUrl(project.s3Key)} alt={project.title} />
 										{:else}
 										<div class="placeholder-thumb"></div>
 										{/if}
@@ -408,7 +413,7 @@
 							</a>
 							<div id="small-dialog-{project.id}" class="white-popup zoom-anim-dialog mfp-hide">
 								{#if project.s3Key}
-									<img class="rounded" src={project.s3Key} alt={project.title} />
+									<img class="rounded" src={getProjectImageUrl(project.s3Key)} alt={project.title} />
 								{:else}
 									<div class="placeholder-thumb rounded mb-3"></div>
 								{/if}

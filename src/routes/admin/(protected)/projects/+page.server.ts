@@ -90,5 +90,44 @@ export const actions: Actions = {
             return fail(400);
         }
         throw redirect(303, `/admin/projects`);
+    },
+
+    getUploadUrl: async ({ request, fetch, cookies }) => {
+        const token = cookies.get("admin_token");
+        if (!token) {
+            return fail(401);
+        }
+        const formData = await request.formData();
+        const id = formData.get("id");
+        const filename = formData.get("filename")?.toString() || "";
+        const contentType = formData.get("contentType")?.toString() || "image/jpeg";
+        const size = Number(formData.get("size")?.toString() || "0");
+
+        const res = await backendFetch(
+            fetch,
+            `/admin/projects/${id}/image/upload-url`,
+            token,
+            {
+                method: "POST",
+                body: JSON.stringify({ filename, contentType, size })
+            }
+        );
+
+        if (!res.ok) {
+            return fail(400, { error: "Failed to get upload URL" });
+        }
+
+        const result = await res.json();
+        
+        // Backend might return array like resume endpoint
+        if (Array.isArray(result)) {
+            return {
+                uploadUrl: result[1],
+                publicUrl: result[2],
+                s3Key: result[0]?.s3Key || result[2]?.split('/').pop()
+            };
+        }
+        
+        return result;
     }
 };
