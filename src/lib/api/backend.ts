@@ -1,4 +1,5 @@
 import { redirect } from "@sveltejs/kit";
+import { API_BASE_URL } from '$lib/env';
 
 export async function backendFetch(
     fetchFn: typeof fetch,
@@ -14,7 +15,7 @@ export async function backendFetch(
         headers.Authorization = `Bearer ${token}`;
     }
     const res = await fetchFn(
-        `${import.meta.env.VITE_API_BASE_URL}${url}`,
+        `${API_BASE_URL}${url}`,
         {
             ...options,
             headers

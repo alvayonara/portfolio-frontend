@@ -1,5 +1,6 @@
 <script lang="ts">
   import type { PageData, ActionData } from './$types';
+  import { S3_BASE_URL } from '$lib/env';
   export let data: PageData;
   export let form: ActionData;
 
@@ -11,7 +12,7 @@
 
   // Always construct photoPreview from s3Key when available, with cache busting
   $: photoPreview = profile.s3Key 
-    ? `${import.meta.env.VITE_S3_PUBLIC_BASE_URL}/profile/${profile.s3Key}?t=${Date.now()}` 
+    ? `${S3_BASE_URL}/profile/${profile.s3Key}?t=${Date.now()}` 
     : null;
 
   async function uploadPhoto(e: Event) {
@@ -69,7 +70,7 @@
       if (!uploadRes.ok) throw new Error("Upload failed");
 
       profile.s3Key = s3Key;
-      photoPreview = `${import.meta.env.VITE_S3_PUBLIC_BASE_URL}/profile/${s3Key}`;
+      photoPreview = `${S3_BASE_URL}/profile/${s3Key}`;
       input.value = "";
     } catch (error) {
       console.error("Photo upload error:", error);

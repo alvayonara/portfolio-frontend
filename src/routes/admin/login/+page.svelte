@@ -1,4 +1,6 @@
 <script lang="ts">
+  import { API_BASE_URL } from '$lib/env';
+  
   let username = '';
   let password = '';
   let error = '';
@@ -10,7 +12,7 @@
 
     try {
       const res = await fetch(
-        `${import.meta.env.VITE_API_BASE_URL}/auth/login`,
+        `${API_BASE_URL}/auth/login`,
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
