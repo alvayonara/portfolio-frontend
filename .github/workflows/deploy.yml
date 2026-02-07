@@ -1,0 +1,54 @@
+name: Deploy Svelte to S3
+
+on:
+  push:
+    branches: ["main"]
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build Svelte
+        run: |
+          echo "VITE_API_BASE_URL=${{ secrets.VITE_API_BASE_URL }}" > .env.production
+          echo "VITE_S3_PUBLIC_BASE_URL=${{ secrets.VITE_S3_PUBLIC_BASE_URL }}" >> .env.production
+          npm run build
+
+      - name: Configure AWS
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      # Clean old files (important for SPA)
+      - name: Clear S3 bucket
+        run: |
+          aws s3 rm s3://${{ secrets.S3_BUCKET }} --recursive
+
+      - name: Upload to S3
+        run: |
+          aws s3 sync build s3://${{ secrets.S3_BUCKET }} \
+            --delete \
+            --cache-control "public,max-age=31536000,immutable" \
+            --exclude "index.html"
+
+      - name: Upload index.html (no cache)
+        run: |
+          aws s3 cp build/index.html s3://${{ secrets.S3_BUCKET }}/index.html \
+            --cache-control "no-cache,no-store,must-revalidate"
