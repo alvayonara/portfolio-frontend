@@ -2,6 +2,7 @@
   import type { PageData } from "./$types";
   import { backendFetch } from "$lib/api/backend";
   import { page } from "$app/stores";
+  import { S3_BASE_URL } from '$lib/env';
 
   export let data: PageData;
 
@@ -51,7 +52,7 @@
     };
 
     imagePreview = p.s3Key
-      ? `${import.meta.env.VITE_S3_PUBLIC_BASE_URL}/${p.s3Key}`
+      ? `${S3_BASE_URL}/${p.s3Key}`
       : null;
   }
 
@@ -234,7 +235,7 @@
       {#if p.s3Key}
         <img
           class="thumb"
-          src={`${import.meta.env.VITE_S3_PUBLIC_BASE_URL}/${p.s3Key}`}
+          src={`${S3_BASE_URL}/${p.s3Key}`}
           alt={p.title}
         />
       {/if}

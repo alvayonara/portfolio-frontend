@@ -1,11 +1,12 @@
 import { redirect } from '@sveltejs/kit';
+import { API_BASE_URL } from '$lib/env';
 
 export const load = async ({ cookies }) => {
   const token = cookies.get('admin_token');
   if (!token) {
     throw redirect(302, '/admin/login');
   }
-  const res = await fetch(`${import.meta.env.VITE_API_BASE_URL}/admin/profile`, {
+  const res = await fetch(`${API_BASE_URL}/admin/profile`, {
     headers: {
       Authorization: `Bearer ${token}`
     }

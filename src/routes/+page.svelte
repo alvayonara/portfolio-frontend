@@ -1,6 +1,7 @@
 <script lang="ts">
 	import type { PageData } from './$types';
 	import { onMount } from 'svelte';
+	import { API_BASE_URL, S3_BASE_URL } from '$lib/env';
 
 	export let data: PageData;
 
@@ -26,7 +27,7 @@
 		}
 
 		try {
-			const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/contact`, {
+			const response = await fetch(`${API_BASE_URL}/contact`, {
 				method: 'POST',
 				headers: {
 					'Content-Type': 'application/json',
@@ -58,7 +59,7 @@
 
 	function getProjectImageUrl(s3Key: string | null): string | null {
 		if (!s3Key) return null;
-		return `${import.meta.env.VITE_S3_PUBLIC_BASE_URL}/${s3Key}`;
+		return `${S3_BASE_URL}/${s3Key}`;
 	}
 
 	onMount(() => {
@@ -203,7 +204,7 @@
 			<div class="intro">
 				{#if data.profile?.s3Key}
 					<img 
-						src={`${import.meta.env.VITE_S3_PUBLIC_BASE_URL}/profile/${data.profile.s3Key}`} 
+						src={`${S3_BASE_URL}/profile/${data.profile.s3Key}`} 
 						width="108" 
 						height="108" 
 						alt="{data.profile.fullName} | Profile" 
@@ -275,7 +276,7 @@
 					<div class="text-center text-md-left">
 						{#if data.profile?.s3Key}
 							<img 
-								src={`${import.meta.env.VITE_S3_PUBLIC_BASE_URL}/profile/${data.profile.s3Key}`} 
+								src={`${S3_BASE_URL}/profile/${data.profile.s3Key}`} 
 								width="150" 
 								height="150" 
 								alt="{data.profile.fullName} | Profile" 
