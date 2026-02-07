@@ -201,9 +201,9 @@
 	<section id="home" class="home d-flex align-items-center">
 		<div class="container">
 			<div class="intro">
-				{#if data.profile?.photo}
+				{#if data.profile?.s3Key}
 					<img 
-						src={data.profile.photo} 
+						src={`${import.meta.env.VITE_S3_PUBLIC_BASE_URL}/profile/${data.profile.s3Key}`} 
 						width="108" 
 						height="108" 
 						alt="{data.profile.fullName} | Profile" 
@@ -273,9 +273,9 @@
 			<div class="row">
 				<div class="col-md-3">
 					<div class="text-center text-md-left">
-						{#if data.profile?.photo}
+						{#if data.profile?.s3Key}
 							<img 
-								src={data.profile.photo} 
+								src={`${import.meta.env.VITE_S3_PUBLIC_BASE_URL}/profile/${data.profile.s3Key}`} 
 								width="150" 
 								height="150" 
 								alt="{data.profile.fullName} | Profile" 
