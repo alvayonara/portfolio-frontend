@@ -69,24 +69,54 @@
     uploading = true;
 
     try {
-      const res = await backendFetch(
-        fetch,
-        `/admin/projects/${form.id}/upload-url`,
-        undefined,
-        {
-          method: "POST",
-          body: JSON.stringify({
-            filename: file.name,
-            contentType: file.type,
-            size: file.size,
-          }),
-        },
-      );
+      // Get upload URL via server action
+      const formData = new FormData();
+      formData.append("id", form.id.toString());
+      formData.append("filename", file.name);
+      formData.append("contentType", file.type);
+      formData.append("size", file.size.toString());
+
+      const res = await fetch("?/getUploadUrl", {
+        method: "POST",
+        body: formData,
+      });
 
       if (!res.ok) throw new Error("Failed to get upload URL");
 
-      const { uploadUrl, publicUrl, s3Key } = await res.json();
+      const result = await res.json();
+      console.log("Upload URL response:", result);
 
+      // Handle failure response
+      if (result.type === 'failure') {
+        const errorData = typeof result.data === 'string' ? JSON.parse(result.data) : result.data;
+        console.error("Backend error:", errorData);
+        throw new Error(errorData[1] || errorData.error || "Failed to get upload URL");
+      }
+
+      let uploadUrl, publicUrl, s3Key;
+      
+      if (result.type === 'success' && result.data) {
+        // Parse stringified data if needed
+        const data = typeof result.data === 'string' ? JSON.parse(result.data) : result.data;
+        
+        if (Array.isArray(data)) {
+          uploadUrl = data[1];
+          publicUrl = data[2];
+          s3Key = data[0]?.s3Key || data[2]?.split('/').pop();
+        } else {
+          uploadUrl = data.uploadUrl;
+          publicUrl = data.publicUrl;
+          s3Key = data.s3Key;
+        }
+      } else {
+        uploadUrl = result.uploadUrl;
+        publicUrl = result.publicUrl;
+        s3Key = result.s3Key;
+      }
+
+      if (!uploadUrl) throw new Error("No upload URL received");
+
+      // Upload to S3
       const uploadRes = await fetch(uploadUrl, {
         method: "PUT",
         headers: { "Content-Type": file.type },
@@ -98,8 +128,9 @@
       form.s3Key = s3Key;
       imagePreview = publicUrl;
       input.value = "";
-    } catch {
-      alert("Image upload failed");
+    } catch (error) {
+      console.error("Image upload error:", error);
+      alert("Image upload failed: " + (error instanceof Error ? error.message : "Unknown error"));
     } finally {
       uploading = false;
     }

@@ -10,24 +10,57 @@
     const file = (e.target as HTMLInputElement).files?.[0];
     if (!file) return;
 
+    console.log("File selected:", { name: file.name, type: file.type, size: file.size });
+
     uploading = true;
     uploaded = false;
 
     try {
-      // 1. ask backend for presigned URL
+      // 1. ask backend for presigned URL via server action (avoids CORS)
       const formData = new FormData();
-      formData.append("filename", file.name);
-      formData.append("contentType", file.type);
-      formData.append("size", file.size.toString());
+      formData.append("filename", file.name || "resume.pdf");
+      formData.append("contentType", file.type || "application/pdf");
+      formData.append("size", (file.size || 0).toString());
 
       const res = await fetch("?/createUploadUrl", {
         method: "POST",
         body: formData
       });
 
-      if (!res.ok) throw new Error("Failed to get upload URL");
+      if (!res.ok) {
+        const errorText = await res.text();
+        console.error("Upload URL error:", errorText);
+        throw new Error("Failed to get upload URL");
+      }
 
-      const { uploadUrl, publicUrl } = await res.json();
+      const result = await res.json();
+      console.log("Upload URL response:", result);
+      
+      let uploadUrl, publicUrl;
+      
+      if (result.type === 'success' && result.data) {
+        // Parse the stringified data
+        const data = typeof result.data === 'string' ? JSON.parse(result.data) : result.data;
+        console.log("Parsed data:", data);
+        
+        // Backend returns array: [metadata, uploadUrl, publicUrl]
+        if (Array.isArray(data)) {
+          uploadUrl = data[1];
+          publicUrl = data[2];
+        } else {
+          uploadUrl = data.uploadUrl;
+          publicUrl = data.publicUrl;
+        }
+      } else {
+        uploadUrl = result.uploadUrl;
+        publicUrl = result.publicUrl;
+      }
+      
+      console.log("Extracted URLs:", { uploadUrl, publicUrl });
+      
+      if (!uploadUrl || !publicUrl) {
+        throw new Error("Invalid upload URLs received");
+      }
 
       // 2. upload directly to S3
       const uploadRes = await fetch(uploadUrl, {
@@ -43,7 +76,8 @@
       // reload page to refresh resume info
       location.reload();
     } catch (err) {
-      alert("Resume upload failed");
+      console.error("Resume upload error:", err);
+      alert("Resume upload failed: " + (err instanceof Error ? err.message : "Unknown error"));
     } finally {
       uploading = false;
     }
@@ -57,15 +91,14 @@
 
   {#if data.resume}
     <p>
-      <strong>{data.resume.originalFilename}</strong><br />
-      Uploaded at: {new Date(data.resume.uploadedAt).toLocaleString()}
+      Uploaded at: {new Date(data.resume.updatedAt).toLocaleString()}
     </p>
 
     <a
-      href={data.resume.publicUrl}
+      href={data.resume.url}
       target="_blank"
-      rel="noopener"
-      class="link"
+      rel="noopener noreferrer"
+      class="btn btn-primary"
     >
       📄 Download Resume
     </a>
