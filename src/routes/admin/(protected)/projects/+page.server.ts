@@ -129,5 +129,43 @@ export const actions: Actions = {
         }
         
         return result;
+    },
+
+    getThumbnailUploadUrl: async ({ request, fetch, cookies }) => {
+        const token = cookies.get("admin_token");
+        if (!token) {
+            return fail(401);
+        }
+        const formData = await request.formData();
+        const id = formData.get("id");
+        const filename = formData.get("filename")?.toString() || "";
+        const contentType = formData.get("contentType")?.toString() || "image/jpeg";
+        const size = Number(formData.get("size")?.toString() || "0");
+
+        const res = await backendFetch(
+            fetch,
+            `/admin/projects/${id}/thumbnail/upload-url`,
+            token,
+            {
+                method: "POST",
+                body: JSON.stringify({ filename, contentType, size })
+            }
+        );
+
+        if (!res.ok) {
+            return fail(400, { error: "Failed to get thumbnail upload URL" });
+        }
+
+        const result = await res.json();
+        
+        if (Array.isArray(result)) {
+            return {
+                uploadUrl: result[1],
+                publicUrl: result[2],
+                s3Key: result[0]?.s3Key || result[2]?.split('/').pop()
+            };
+        }
+        
+        return result;
     }
 };
