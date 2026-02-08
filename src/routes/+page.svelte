@@ -62,6 +62,11 @@
 		return `${S3_BASE_URL}/${s3Key}`;
 	}
 
+	function getProjectThumbnailUrl(project: any): string | null {
+		const key = project.thumbnailS3Key || project.s3Key;
+		return key ? `${S3_BASE_URL}/${key}` : null;
+	}
+
 	onMount(() => {
 		const preloader = document.getElementById('preloader');
 		if (preloader) {
@@ -403,8 +408,8 @@
 										<span class="more-button"><i class="icon-options"></i></span>
 									</div>
 									<div class="thumb">
-										{#if project.s3Key}
-										<img src={getProjectImageUrl(project.s3Key)} alt={project.title} />
+									{#if project.thumbnailS3Key || project.s3Key}
+									<img src={getProjectThumbnailUrl(project)} alt={project.title} />
 										{:else}
 										<div class="placeholder-thumb"></div>
 										{/if}

@@ -23,6 +23,7 @@
     techStack: string;
     repoUrl: string;
     s3Key: string | null;
+    thumbnailS3Key: string | null;
   };
 
   const emptyForm = (): ProjectForm => ({
@@ -32,13 +33,16 @@
     techStack: "",
     repoUrl: "",
     s3Key: null,
+    thumbnailS3Key: null,
   });
 
   let form: ProjectForm = emptyForm();
   let currentProject: any = null;
 
   let imagePreview: string | null = null;
+  let thumbnailPreview: string | null = null;
   let uploading = false;
+  let uploadingThumbnail = false;
 
   function edit(p: any) {
     currentProject = p;
@@ -49,10 +53,15 @@
       techStack: p.techStack ?? "",
       repoUrl: p.repoUrl ?? "",
       s3Key: p.s3Key ?? null,
+      thumbnailS3Key: p.thumbnailS3Key ?? null,
     };
 
     imagePreview = p.s3Key
       ? `${S3_BASE_URL}/${p.s3Key}`
+      : null;
+
+    thumbnailPreview = p.thumbnailS3Key
+      ? `${S3_BASE_URL}/${p.thumbnailS3Key}`
       : null;
   }
 
@@ -60,6 +69,7 @@
     form = emptyForm();
     currentProject = null;
     imagePreview = null;
+    thumbnailPreview = null;
   }
 
   async function uploadImage(e: Event) {
@@ -136,6 +146,77 @@
       uploading = false;
     }
   }
+
+  async function uploadThumbnail(e: Event) {
+    const input = e.target as HTMLInputElement;
+    const file = input.files?.[0];
+    if (!file || !form.id) return;
+
+    uploadingThumbnail = true;
+
+    try {
+      const formData = new FormData();
+      formData.append("id", form.id.toString());
+      formData.append("filename", file.name);
+      formData.append("contentType", file.type);
+      formData.append("size", file.size.toString());
+
+      const res = await fetch("?/getThumbnailUploadUrl", {
+        method: "POST",
+        body: formData,
+      });
+
+      if (!res.ok) throw new Error("Failed to get thumbnail upload URL");
+
+      const result = await res.json();
+      console.log("Thumbnail upload URL response:", result);
+
+      if (result.type === 'failure') {
+        const errorData = typeof result.data === 'string' ? JSON.parse(result.data) : result.data;
+        console.error("Backend error:", errorData);
+        throw new Error(errorData[1] || errorData.error || "Failed to get thumbnail upload URL");
+      }
+
+      let uploadUrl, publicUrl, s3Key;
+      
+      if (result.type === 'success' && result.data) {
+        const data = typeof result.data === 'string' ? JSON.parse(result.data) : result.data;
+        
+        if (Array.isArray(data)) {
+          uploadUrl = data[1];
+          publicUrl = data[2];
+          s3Key = data[0]?.s3Key || data[2]?.split('/').pop();
+        } else {
+          uploadUrl = data.uploadUrl;
+          publicUrl = data.publicUrl;
+          s3Key = data.s3Key;
+        }
+      } else {
+        uploadUrl = result.uploadUrl;
+        publicUrl = result.publicUrl;
+        s3Key = result.s3Key;
+      }
+
+      if (!uploadUrl) throw new Error("No upload URL received");
+
+      const uploadRes = await fetch(uploadUrl, {
+        method: "PUT",
+        headers: { "Content-Type": file.type },
+        body: file,
+      });
+
+      if (!uploadRes.ok) throw new Error("Thumbnail upload failed");
+
+      form.thumbnailS3Key = s3Key;
+      thumbnailPreview = publicUrl;
+      input.value = "";
+    } catch (error) {
+      console.error("Thumbnail upload error:", error);
+      alert("Thumbnail upload failed: " + (error instanceof Error ? error.message : "Unknown error"));
+    } finally {
+      uploadingThumbnail = false;
+    }
+  }
 </script>
 
 <h1>Projects</h1>
@@ -174,7 +255,20 @@
       </label>
 
       <label>
-        Project Image
+        Thumbnail (for project listing)
+        <input type="file" accept="image/*" on:change={uploadThumbnail} />
+      </label>
+
+      {#if uploadingThumbnail}
+        <p class="muted">Uploading thumbnail…</p>
+      {/if}
+
+      {#if thumbnailPreview}
+        <img class="preview" src={thumbnailPreview} alt="Thumbnail Preview" />
+      {/if}
+
+      <label>
+        Project Detail Image (shown when project is clicked)
         <input type="file" accept="image/*" on:change={uploadImage} />
       </label>
 
@@ -183,7 +277,7 @@
       {/if}
 
       {#if imagePreview}
-        <img class="preview" src={imagePreview} alt="Preview" />
+        <img class="preview" src={imagePreview} alt="Detail Image Preview" />
       {/if}
 
       <div class="actions">
@@ -232,13 +326,29 @@
         <span class="badge draft">Draft</span>
       {/if}
 
-      {#if p.s3Key}
-        <img
-          class="thumb"
-          src={`${S3_BASE_URL}/${p.s3Key}`}
-          alt={p.title}
-        />
-      {/if}
+      <div class="images">
+        {#if p.thumbnailS3Key}
+          <div class="image-item">
+            <label>Thumbnail</label>
+            <img
+              class="thumb"
+              src={`${S3_BASE_URL}/${p.thumbnailS3Key}`}
+              alt={p.title}
+            />
+          </div>
+        {/if}
+        
+        {#if p.s3Key}
+          <div class="image-item">
+            <label>Detail Image</label>
+            <img
+              class="thumb"
+              src={`${S3_BASE_URL}/${p.s3Key}`}
+              alt={p.title}
+            />
+          </div>
+        {/if}
+      </div>
 
       <p>{p.description}</p>
 
@@ -298,6 +408,25 @@
     max-width: 160px;
     border-radius: 4px;
     margin-top: 0.5rem;
+  }
+
+  .images {
+    display: flex;
+    gap: 1rem;
+    margin-top: 0.5rem;
+    flex-wrap: wrap;
+  }
+
+  .image-item {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+  }
+
+  .image-item label {
+    font-size: 0.75rem;
+    color: #666;
+    font-weight: 600;
   }
 
   .card {
