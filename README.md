@@ -49,10 +49,6 @@ portfolio-frontend/
 
 **static/** - CSS, JavaScript libraries, fonts, and images that don't change.
 
-## Main Features
-
-Clean portfolio homepage with smooth animations. Admin panel for managing all content without touching code. Project popups using Magnific Popup library. Contact form with honeypot spam protection. Responsive design that works on mobile. All images loaded from S3 for faster performance.
-
 ## Deployment on Vercel
 
 Already configured for Vercel. Connect your repo and set the environment variables. The rest should be straightforward.
