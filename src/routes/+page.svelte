@@ -1,6 +1,6 @@
 <script lang="ts">
 	import type { PageData } from './$types';
-	import { onMount } from 'svelte';
+	import { onMount, tick } from 'svelte';
 	import { API_BASE_URL, S3_BASE_URL } from '$lib/env';
 
 	export let data: PageData;
@@ -56,6 +56,12 @@
 	}
 
 	$: filteredProjects = data.projects || [];
+	
+	$: if (filteredProjects && typeof window !== 'undefined') {
+		tick().then(() => {
+			initializeProjectPopups();
+		});
+	}
 
 	function getProjectImageUrl(s3Key: string | null): string | null {
 		if (!s3Key) return null;
@@ -65,6 +71,33 @@
 	function getProjectThumbnailUrl(project: any): string | null {
 		const key = project.thumbnailS3Key || project.s3Key;
 		return key ? `${S3_BASE_URL}/${key}` : null;
+	}
+
+	function initializeProjectPopups() {
+		const $ = globalThis.$;
+		if ($) {
+			const $workContent = $('.work-content');
+			if ($workContent.length > 0) {
+				$workContent.each(function() {
+					const $this = $(this);
+					if ($this.data('magnificPopup')) {
+						$this.magnificPopup('destroy');
+					}
+				});
+				
+				$workContent.magnificPopup({
+					type: 'inline',
+					fixedContentPos: true,
+					fixedBgPos: true,
+					overflowY: 'auto',
+					closeBtnInside: true,
+					preloader: false,
+					midClick: true,
+					removalDelay: 300,
+					mainClass: 'my-mfp-zoom-in'
+				});
+			}
+		}
 	}
 
 	onMount(() => {
@@ -87,17 +120,7 @@
 				}
 			});
 
-			$('.work-content').magnificPopup({
-				type: 'inline',
-				fixedContentPos: true,
-				fixedBgPos: true,
-				overflowY: 'auto',
-				closeBtnInside: true,
-				preloader: false,
-				midClick: true,
-				removalDelay: 300,
-				mainClass: 'my-mfp-zoom-in'
-			});
+			initializeProjectPopups();
 		}
 
 		if (typeof window !== 'undefined') {
