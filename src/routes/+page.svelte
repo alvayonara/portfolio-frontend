@@ -635,7 +635,7 @@
 
 	.placeholder-thumb {
 		width: 100%;
-		height: 300px;
+		height: 260px;
 		background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
 		display: flex;
 		align-items: center;
@@ -649,6 +649,36 @@
 		font-weight: 400;
 		font-size: 60px;
 		color: rgba(255, 255, 255, 0.3);
+	}
+
+	/* Ensure .thumb areas have a uniform, sub-300px height and images cover */
+	.thumb {
+		height: 260px;
+		overflow: hidden;
+	}
+
+	.thumb img {
+		width: 100%;
+		height: 100%;
+		object-fit: cover;
+		display: block;
+	}
+
+	.thumb .placeholder-thumb {
+		height: 100%;
+	}
+
+	/* Also apply the same constrained height to popup images/placeholders */
+	.white-popup img.rounded {
+		width: 100%;
+		height: 260px;
+		object-fit: cover;
+		display: block;
+	}
+
+	.white-popup .placeholder-thumb {
+		height: 260px;
+		width: 100%;
 	}
 
 	:global(.white-popup p) {
