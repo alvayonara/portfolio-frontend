@@ -59,7 +59,7 @@
 	
 	$: if (filteredProjects && typeof window !== 'undefined') {
 		tick().then(() => {
-			initializeProjectPopups();
+			ensureProjectPopups();
 		});
 	}
 
@@ -100,6 +100,39 @@
 		}
 	}
 
+	function ensureProjectPopups() {
+		if (typeof window === 'undefined') return;
+		const checkAndInit = () => {
+			const $ = globalThis.$;
+			if ($ && $.fn && $.fn.magnificPopup) {
+				initializeProjectPopups();
+				return true;
+			}
+			return false;
+		};
+
+		if (checkAndInit()) return;
+
+		const onLoad = () => {
+			checkAndInit();
+			window.removeEventListener('load', onLoad);
+		};
+
+		window.addEventListener('load', onLoad);
+
+		const interval = setInterval(() => {
+			if (checkAndInit()) {
+				clearInterval(interval);
+				window.removeEventListener('load', onLoad);
+			}
+		}, 100);
+
+		setTimeout(() => {
+			clearInterval(interval);
+			window.removeEventListener('load', onLoad);
+		}, 5000);
+	}
+
 	onMount(() => {
 		const preloader = document.getElementById('preloader');
 		if (preloader) {
@@ -119,9 +152,9 @@
 					$(this).css('height', height + 'px');
 				}
 			});
-
-			initializeProjectPopups();
 		}
+
+		ensureProjectPopups();
 
 		if (typeof window !== 'undefined') {
 			if (window.WOW) {
