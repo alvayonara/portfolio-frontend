@@ -57,12 +57,8 @@ Already configured for Vercel. Connect your repo and set the environment variabl
 
 Planning to add more improvements:
 
-- Add proper TypeScript types for all API responses
 - Unit tests for components and API client
 - E2E tests using Playwright
-- Better error handling and loading states
-- PWA support for offline access
-- Performance optimization for images
 
 ## License
 
